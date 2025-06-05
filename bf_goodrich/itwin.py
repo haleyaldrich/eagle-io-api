@@ -58,7 +58,7 @@ def get_token() -> str:
     return r["access_token"]
 
 
-def get_all_nodes():
+def get_all_nodes() -> dict:
     """
     Gets all nodes from the iTwin platform.
 
@@ -91,6 +91,12 @@ def query_node_by_dates(
         sensor_id (str): The ID of the sensor to query
         start_date (str, optional): The start date for the data query in ISO 8601 format
         end_date (str, optional): The end date for the data query in ISO 8601 format
+
+    .. note::
+        Pagination does not seem to be supported by the API. While the docs
+        mention pagination (https://developer.bentley.com/apis/overview/api-fundamentals/)
+        it does not appear to be implemented. The API returns all data for the
+        specified sensor ID and date range in a single response.
     """
     headers = {
         "Authorization": f"Bearer {os.getenv('ITWIN_IOT_API_TOKEN')}",
