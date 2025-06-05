@@ -1,5 +1,6 @@
 from bf_goodrich import itwin
 
+
 def test_get_token():
     """
     Test the get_token function to ensure it retrieves a valid access token.
@@ -20,7 +21,7 @@ def test_get_all_nodes():
 
 
 def test_query_node_by_dates():
-    sensor = '/loadsensing/27990/node/dynamic/86313/device/vw1/sensor'
+    sensor = "/loadsensing/27990/node/dynamic/86313/device/vw1/sensor"
     start_date = "2025-03-01T00:00:00.000Z"
     end_date = "2025-03-10T00:00:00.000Z"
     data = itwin.query_node_by_dates(sensor, start_date, end_date)
