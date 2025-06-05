@@ -115,11 +115,10 @@ def query_node_by_dates(
         },
     }
     response = handle_request(requests.post(url, headers=headers, json=body))
-
     if "data" in response:
         return response["data"]
     else:
-        raise Exception("No data found for the given sensor ID and date range")
+        raise Exception("No data found for the given sensor ID and date range.")
 
 
 def _get_latest_date_from_data(data: dict) -> str:
