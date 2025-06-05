@@ -1,4 +1,9 @@
+import json
+import os
+
 from bf_goodrich import itwin
+
+OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "output")
 
 
 def test_get_token():
@@ -22,7 +27,10 @@ def test_get_all_nodes():
 
 def test_query_node_by_dates():
     sensor = "/loadsensing/27990/node/dynamic/86313/device/vw1/sensor"
-    start_date = "2025-03-01T00:00:00.000Z"
-    end_date = "2025-03-10T00:00:00.000Z"
+    start_date = "2025-01-01T00:00:00.000Z"
+    end_date = "2025-05-10T00:00:00.000Z"
     data = itwin.query_node_by_dates(sensor, start_date, end_date)
     assert isinstance(data, dict)
+    p = os.path.join(OUTPUT_DIR, "vw1_sensor.json")
+    with open(p, "w") as f:
+        json.dump(data, f, indent=4)
