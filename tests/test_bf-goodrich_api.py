@@ -31,6 +31,9 @@ def test_query_node_by_dates():
     end_date = "2025-05-10T00:00:00.000Z"
     data = itwin.query_node_by_dates(sensor, start_date, end_date)
     assert isinstance(data, dict)
+    k = list(data.keys())[0]
+    assert data[k]
+    assert isinstance(data[k], list)
     p = os.path.join(OUTPUT_DIR, "vw1_sensor.json")
     with open(p, "w") as f:
         json.dump(data, f, indent=4)
