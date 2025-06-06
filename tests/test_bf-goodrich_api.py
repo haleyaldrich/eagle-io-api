@@ -33,7 +33,7 @@ def test_query_node_by_dates():
     assert isinstance(data, dict)
     k = list(data.keys())[0]
     assert data[k]
-    assert isinstance(data[k], list)
+    assert isinstance(data[k], dict)
     p = os.path.join(OUTPUT_DIR, "vw1_sensor.json")
     with open(p, "w") as f:
         json.dump(data, f, indent=4)
