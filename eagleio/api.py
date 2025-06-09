@@ -14,7 +14,6 @@ class EagleIOWorkspace:
         self.headers = {"X-Api-Key": self.api_key}
         self._nodes = {node["name"]: node["_id"] for node in self.get_nodes()}
 
-
     def get_nodes(self) -> dict:
         """
         Fetch all nodes and a reduced set of attributes from the Eagle.io API.
@@ -172,9 +171,20 @@ class EagleIOWorkspace:
 
         Args:
             name (str): The datasource name to which the data will be loaded.
-            data (dict): The data to be loaded into the datasource.
+            data (dict): The data to be loaded into the datasource. Data must be
+                time-series data structured as a nested JSON object. See example
+                below.
             names_mapper (dict): Mapping of column names to storage names.
             units (dict): Mapping of column names to units.
+
+        .. example::
+            data = {
+                "2025-02-05T17:00:00.000Z": {"f": 1000, "T": 16},
+                "2025-02-05T18:00:00.000Z": {"f": 1500, "T": 17},
+                "2025-02-05T19:00:00.000Z": {"f": 1800, "T": 18},
+            }
+            names_mapper = {"f": "Frequency", "T": "Temperature"} # Names to be used in Eagle.io
+            units = {"f": "digits", "T": "C"} # Units to be used in Eagle.io
 
         Raises:
             ValueError: If the datasource is not found or if the API request fails.
@@ -186,5 +196,3 @@ class EagleIOWorkspace:
 
         if response.status_code != 202:
             raise ValueError(f"Failed to load data to datasource: {response.text}")
-
-
