@@ -115,5 +115,9 @@ def test_compute_piezo_elevation():
     )
 
     assert isinstance(result, dict), "Result should be a dictionary"
-    assert isinstance(result["2025-02-05T17:00:00.000Z"], dict), "Result entry should be a dictionary"
-    assert "water_elevation" in result["2025-02-05T17:00:00.000Z"], "Water elevation should be present"
+    assert isinstance(
+        result["2025-02-05T17:00:00.000Z"], dict
+    ), "Result entry should be a dictionary"
+    assert (
+        "water_elevation" in result["2025-02-05T17:00:00.000Z"]
+    ), "Water elevation should be present"
