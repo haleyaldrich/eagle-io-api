@@ -138,6 +138,6 @@ def compute_piezo_elevation(
 
     sensor_elevation = sensor_info["ground_elev"] - sensor_info["sensor_depth"]
     df["water_elevation"] = df["ft_water"] + sensor_elevation
-    
+
     df.set_index("timestamp", inplace=True)
     return df[["water_elevation"]].to_dict(orient="index")
