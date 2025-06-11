@@ -1,3 +1,5 @@
+from datetime import datetime
+import os
 import requests
 
 
@@ -34,5 +36,37 @@ def get_gauge_data():
         data[point["validTime"]] = {
             "water_elevation": point["primary"],
         }
+
+    return data
+
+
+def get_manual_data():
+    """
+    Retrieves manual water elevation data and transforms it into a dictionary
+    with timestamps as keys and water elevation values as nested dictionaries:
+
+    {
+        "2023-10-01T00:00:00Z": {
+            "water_elevation": 123.45
+        },
+        "2023-10-01T01:00:00Z": {
+            "water_elevation": 124.56
+        },
+        ...
+    }
+    """
+    p = os.path.join(
+        os.path.dirname(__file__),
+        "data",
+        "river_elev.txt",
+    )
+    data = {}
+    with open(p, "r") as f:
+        lines = f.readlines()[1:]  # Skip the header line
+        for line in lines:
+            date, water_elevation, _ = line.strip().split(",")
+            date = date + ".000Z"
+            date = date.replace(" ", "T")
+            data[date] = {"water_elevation": float(water_elevation)}
 
     return data
