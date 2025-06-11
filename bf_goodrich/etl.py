@@ -127,6 +127,15 @@ def main():
         units={"water_elevation": "ft"},
     )
 
+    logger.info("Loading NWPS manual data")
+    data = nwps.get_manual_data()
+    eagleio.load_data_to_datasource(
+        name="River Elevation",
+        data=data,
+        names_mapper={"water_elevation": "Water Elevation (ft)"},
+        units={"water_elevation": "ft"},
+    )
+
 
 if __name__ == "__main__":
     main()
