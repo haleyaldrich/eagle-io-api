@@ -228,4 +228,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    # get_manual_transducer_data("LW-04")
