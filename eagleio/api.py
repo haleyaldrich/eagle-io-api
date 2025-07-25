@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+from dateutil import parser
 import requests
 
 
@@ -12,7 +14,7 @@ class EagleIOWorkspace:
         self.api_key = api_key
         self._base_url = "https://api.eagle.io/api/v1"
         self.headers = {"X-Api-Key": self.api_key}
-        self._nodes = {node["name"]: node["_id"] for node in self.get_nodes()}
+        self._nodes = self.get_nodes()
 
     def get_nodes(self) -> dict:
         """
@@ -20,7 +22,7 @@ class EagleIOWorkspace:
         """
         url = f"{self._base_url}/nodes/"
         params = {
-            "attr": "_id,_class,name,workspaceId",
+            "attr": "_id,_class,name,workspaceId,parentId",
         }
 
         response = requests.get(url, headers=self.headers, params=params)
@@ -196,3 +198,43 @@ class EagleIOWorkspace:
 
         if response.status_code != 202:
             raise ValueError(f"Failed to load data to datasource: {response.text}")
+
+    def get_latest_timestamp_from_datasource_by_name(self, name: str) -> str:
+        """
+        Retrieves the latest timestamp(s) from all parameters of a datasource identified by its name.
+
+        Note:
+            - A datasource is a node with the class 'io.eagle.models.node.source.data.Jts'.
+            - Each parameter is a child node of the datasource.
+            - The method first retrieves the datasource ID by name, then finds all child nodes
+              associated with that datasource ID.
+        """
+        end_date = datetime.now() + timedelta(days=1)
+        end_date = end_date.strftime("%Y-%m-%d") + "T00:00:00.000Z"
+        datasource_id = self.get_datasource_id_by_name(name)
+
+        children_ids = []
+        for node in self._nodes:
+            if "parentId" in node and node["parentId"] == datasource_id:
+                children_ids.append(node["_id"])
+
+        if not children_ids:
+            raise ValueError(f"No child nodes found for datasource: {name}")
+
+        latest_dates = []
+        for child_id in children_ids:
+            url = f"{self._base_url}/nodes/{child_id}/historic"
+            params = {"limit": "25", "endTime": end_date}
+            response = requests.get(url, headers=self.headers, params=params)
+            if response.status_code != 200:
+                raise ValueError(f"Failed to query datasource by name: {response.text}")
+
+            dates = [d["ts"] for d in response.json()["data"]]
+            dates = [parser.parse(d) for d in dates]
+            latest_dates.append(max(dates))
+
+        return (
+            min(latest_dates)
+            .strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+            .replace("000000Z", "000Z")
+        )

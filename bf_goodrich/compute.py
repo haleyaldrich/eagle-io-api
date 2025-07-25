@@ -87,14 +87,10 @@ def compute_piezo_elevation(
         dict: A dictionary with timestamps as keys and calculated water elevation
               {
                   "timestamp_1": {
-                      "p_psi": value_1,
-                      "p_ft_head": value_2,
-                      "water_elevation": value_3,
+                      "water_elevation": value,
                   },
                   "timestamp_2": {
-                      "p_psi": value_1,
-                      "p_ft_head": value_2,
-                      "water_elevation": value_3,
+                      "water_elevation": value,
                   },
                   ...
               }

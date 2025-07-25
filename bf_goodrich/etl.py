@@ -1,4 +1,36 @@
+"""
+ETL Script for ingestions sensor data from BF Goodrich project into Eagle.io
+
+This script orchestrates the extraction, transformation, and loading (ETL) of
+both sensor and manual water elevation data for the B.F. Goodrich project. It
+consolidates data from multiple sources, processes it, and uploads it to the
+Eagle.io platform for centralized monitoring and analysis.
+
+DATA SOURCES:
+- Piezometer data from iTwin IoT
+- Water elevation data from the National Water Prediction Service (NWPS) API
+- Manually collected data from monitoring wells (Excel format)
+
+PIEZOMETER ETL:
+- Gets the latest timestamp from Eagle.io for each device.
+- Retrieves sensor data from iTwin IoT in 30-day increments for each device listed in `devices.json`.
+- Computes water elevation using sensor-specific calibration factors.
+- Loads raw sensor data and computed water elevation data into Eagle.io.
+
+NWPS ETL:
+- Retrieves water elevation data from the NOAA NWPS API for the gauge KYTK2.
+- Loads the data into Eagle.io.
+- Retrieves historical water elevation (API does not provide historical data) and loads it into Eagle.io.
+  - Note: This step may be removed to avoid overwriting existing data, though it is currently harmless.
+
+MANUAL DATA ETL:
+- Reads water elevation data from an Excel file preformatted to match Eagle.io’s API requirements.
+- Filters out records that are already present in Eagle.io.
+- Uploads the new data to Eagle.io.
+"""
+
 from datetime import datetime, timedelta
+from dateutil import parser
 import json
 import logging
 import pandas as pd
@@ -56,11 +88,14 @@ def add_to_date(date: str, days: int) -> str:
     return new_date.replace(".000000Z", ".000Z")
 
 
-def get_manual_transducer_data(name: str) -> dict:
+def get_manual_transducer_data(name: str, start_date: str) -> dict:
     """
-    Retrieves manual transducer data from an Excel file formmatted to Eagle.io
-    APIs standard.
-    The data is expected to be in the following format:
+    Retrieves manual transducer data from an Excel file formatted to Eagle.io
+    API's standard.
+
+    Only rows with timestamps after the specified start_date are included.
+
+    The data is returned in the following format:
 
     {
         "2025-02-05T17:00:00.000Z": {
@@ -100,10 +135,16 @@ def get_manual_transducer_data(name: str) -> dict:
 
     data = {}
     est = timezone("US/Eastern")
+    start_date = parser.parse(start_date)
+
     for _, row in df.iterrows():
         dt = datetime.strptime(row["timestamp"], "%Y-%m-%d %H:%M:%S")
         dt_est = est.localize(dt)
         dt_utc = dt_est.astimezone(timezone("UTC"))
+
+        if start_date is not None and dt_utc < start_date:
+            continue
+
         timestamp = dt_utc.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         data[timestamp] = {
             "temperature": row["temperature"],
@@ -113,25 +154,39 @@ def get_manual_transducer_data(name: str) -> dict:
     return data
 
 
-def main():
+def get_start_date_from_eagleio(name: str) -> str:
     """
-
-    .. note::
-        iTwin IoT API startDate is inclusive meaning that the data for the start
-        date is included in the response.
-
-        Recursion stops when the latest date in the response is equal to the
-        latest date in the previous response.
+    Retrieves the latest timestamp from a datasource in Eagle.io by its name.
+    This is used to determine the starting point for data retrieval from iTwin IoT.
     """
     eagleio = EagleIOWorkspace(os.environ["BF_GOODRICH_EAGLEIO_KEY"])
+    try:
+        start_date = eagleio.get_latest_timestamp_from_datasource_by_name(name)
+    except ValueError as e:
+        return "2022-01-01T00:00:00.000Z"  # Default start date if datasource not found
+    start_date = parser.parse(start_date)
+    start_date = start_date - timedelta(
+        days=1
+    )  # Start from one day before the latest date
+    return start_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ").replace(".000000Z", ".000Z")
+
+
+def main():
+
+    eagleio = EagleIOWorkspace(os.environ["BF_GOODRICH_EAGLEIO_KEY"])
+
+    # Load Piezometer data from iTwin IoT #####################################
     for device in DEVICES:
 
-        start_date = "2025-01-15T00:00:00.000Z"
         logger.info(f"Processing device: {device}")
+        logger.info("Retrieving latest timestamp from Eagle.io")
+        start_date = get_start_date_from_eagleio(device)
+        logger.info(f"Latest timestamp in Eagle.io for {device}: {start_date}")
+
         while True:
             try:
                 # Query data from iTwin platform
-                end_date = add_to_date(start_date, 60)
+                end_date = add_to_date(start_date, 30)
                 data = itwin.query_node_by_dates(
                     sensor_id=DEVICES[device]["id"],
                     start_date=start_date,
@@ -176,7 +231,7 @@ def main():
                     units={"water_elevation": "ft"},
                 )
 
-    # Load NWPS data
+    # Load NWPS data ##########################################################
     logger.info("Loading NWPS data")
     data = nwps.get_gauge_data()
     eagleio.load_data_to_datasource(
@@ -195,11 +250,16 @@ def main():
         units={"water_elevation": "ft"},
     )
 
-    # Load manual transducer data
+    # Load manual transducer data #############################################
     logger.info("Loading manual transducer data")
-    for device in ["LW-04", "LW-08", "LW-10", "LW-14", "LW-18", "LW-20"]:
+    # for device in ["LW-04", "LW-08", "LW-10", "LW-14", "LW-18", "LW-20", "Stilling Well"]:
+    for device in ["Stilling Well"]:
         logger.info(f"Processing manual transducer data for: {device}")
-        data = get_manual_transducer_data(device)
+        logger.info("Retrieving latest timestamp from Eagle.io")
+        start_date = get_start_date_from_eagleio(device)
+        logger.info(f"Latest timestamp in Eagle.io for {device}: {start_date}")
+
+        data = get_manual_transducer_data(device, start_date)
 
         # Process data in batches of 5000 keys
         batch_size = 5000

@@ -110,3 +110,9 @@ def test_load_data_to_datasource():
     units = {"f": "Hz", "T": "C"}
 
     e.load_data_to_datasource("LW-02S", data, names_mapper, units)
+
+def test_get_latest_timestamp_from_datasource_by_name():
+
+    ts = e.get_latest_timestamp_from_datasource_by_name("LW-02S")
+    assert type(ts) is str, "Latest timestamp should be a string"
+    assert ts.endswith(".000Z"), "Latest timestamp should end with 'Z'"
